@@ -37,19 +37,22 @@ app.post('/monitor', (req, res) => {
     console.error('Error reading file:', error);
   }
 
-  // Get last entry from jsonData
-  const lastEntry = jsonData.length > 0 ? jsonData[jsonData.length - 1] : null;
+  // Find existing entry for the current URL
+  let foundEntry = jsonData.find(entry => entry.url === req.body.url);
 
-  // Check if new entry should be created
-  if (shouldCreateNewEntry(lastEntry?.date)) {
+  // Check if new entry should be created or existing updated
+  if (!foundEntry || shouldCreateNewEntry(foundEntry.date)) {
     // Create new entry
-    jsonData.push(req.body);
+    jsonData.push({
+      date: req.body.date,
+      url: req.body.url,
+      scannedFiles: req.body.scannedFiles,
+      problemFiles: req.body.problemFiles
+    });
   } else {
     // Update existing entry with incremented values
-    if (lastEntry) {
-      lastEntry.scannedFiles += req.body.scannedFiles;
-      lastEntry.problemFiles += req.body.problemFiles;
-    }
+    foundEntry.scannedFiles += req.body.scannedFiles;
+    foundEntry.problemFiles += req.body.problemFiles;
   }
 
   // Write updated data back to file

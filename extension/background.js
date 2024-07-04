@@ -71,16 +71,17 @@ function scanFiles() {
 }
 
 // Function to update tabData and send to backend
-function updateTabData(fileScanResults) {
+function updateTabData(fileScanResults, tabUrl) {
   // Update tabData object with new counts
   tabData.scannedFiles += fileScanResults.totalFilesScanned;
   tabData.problemFiles += fileScanResults.problemFiles;
 
   // Store current counts in storage
   chrome.storage.local.set({ 'fileScanData': tabData }, () => {
-    // Create a new entry with date and counts
+    // Create a new entry with date, counts, and URL
     const dataEntry = {
       date: new Date().toISOString(),
+      url: tabUrl,
       scannedFiles: tabData.scannedFiles,
       problemFiles: tabData.problemFiles
     };
@@ -122,7 +123,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           return suspiciousPatterns.some(pattern => pattern.test(content));
         }
 
-        // Function to gather performance metrics and scan files
+        // Function to gather performance metrics and scanning
         function gatherPerformanceMetricsAndScan() {
           // Get all resource URLs
           const resourceUrls = performance.getEntriesByType('resource')
@@ -161,7 +162,8 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           // Send data to background script
           chrome.runtime.sendMessage({
             type: 'resourceData',
-            data: fileScanResults
+            data: fileScanResults,
+            tabUrl: window.location.href
           });
         });
       }
@@ -180,6 +182,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'resourceData') {
     console.log('Received data from tab:', sender.tab.id, message.data);
     // Update tabData and send to backend
-    updateTabData(message.data);
+    updateTabData(message.data, message.tabUrl);
   }
 });
